@@ -1,0 +1,16 @@
+{
+  "name": "project5-nlb-autoscaling",
+  "version": "1.0.0",
+  "description": "Network Flow Lab \u2014 AWS Project 05: scalable web application with a Network Load Balancer and EC2 Auto Scaling.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs",
+    "check": "node --check src/main.js && for f in src/**/*.js; do node --check \"$f\" || exit 1; done"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

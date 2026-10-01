@@ -1,0 +1,23 @@
+{
+  "ImageId": "<YOUR-AMI-ID>",
+  "InstanceType": "t3.micro",
+  "KeyName": "<YOUR-KEY-PAIR-NAME>",
+  "NetworkInterfaces": [
+    {
+      "DeviceIndex": 0,
+      "AssociatePublicIpAddress": true,
+      "Groups": ["<YOUR-SECURITY-GROUP-ID>"]
+    }
+  ],
+  "MetadataOptions": {
+    "HttpTokens": "required",
+    "HttpEndpoint": "enabled"
+  },
+  "TagSpecifications": [
+    {
+      "ResourceType": "instance",
+      "Tags": [{ "Key": "Name", "Value": "p5-web" }, { "Key": "Project", "Value": "p5-nlb-autoscaling" }]
+    }
+  ],
+  "UserData": "<BASE64-OF-user-data.sh>"
+}

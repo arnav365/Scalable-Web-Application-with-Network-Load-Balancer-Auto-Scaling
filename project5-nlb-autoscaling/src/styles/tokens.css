@@ -1,0 +1,76 @@
+/* ==========================================================================
+   Network Flow Lab — design tokens
+   Light engineering canvas. Colour is reserved for meaning:
+   signal (cyan/blue) = traffic · lime = healthy · amber = scaling.
+   ========================================================================== */
+
+:root {
+  /* Surfaces */
+  --paper: #f3f1ec;
+  --paper-2: #ebe8e1;
+  --sheet: #faf9f6;
+  --white: #ffffff;
+
+  /* Ink */
+  --ink: #16181b;
+  --ink-2: #393e44;
+  --ink-3: #5f646b;
+  --ink-4: #8d9198;
+
+  /* Hairlines */
+  --line: #dcd8cf;
+  --line-2: #c6c1b6;
+  --grid: rgba(22, 24, 27, 0.045);
+  --grid-major: rgba(22, 24, 27, 0.07);
+
+  /* Meaning */
+  --signal: #0b8fd8;        /* traffic paths, packets */
+  --signal-ink: #00659f;    /* signal as text on paper (AA) */
+  --signal-soft: #ddeff9;
+  --lime: #b4dc3c;          /* healthy fill — always paired with ink text */
+  --lime-ink: #456200;
+  --lime-soft: #eef7d2;
+  --amber: #e29b13;         /* scaling */
+  --amber-ink: #855400;
+  --amber-soft: #fbefd6;
+  --danger: #b8352a;
+  --danger-soft: #f7e1de;
+
+  /* Type */
+  --f-display: "Inter Tight", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --fs-xs: 0.6875rem;   /* 11 */
+  --fs-sm: 0.8125rem;   /* 13 */
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+  --fs-2xl: clamp(2.25rem, 1.3rem + 3.6vw, 4rem);
+  --fs-hero: clamp(3rem, 1.4rem + 6.4vw, 7.25rem);
+
+  /* Space (4px base) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+  --s-10: 128px;
+
+  --gutter: clamp(16px, 4vw, 48px);
+  --maxw: 1320px;
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+  --dur: 240ms;
+
+  --nav-h: 64px;
+  --shadow-sm: 0 1px 0 rgba(22, 24, 27, 0.04), 0 1px 2px rgba(22, 24, 27, 0.06);
+  --shadow-md: 0 1px 0 rgba(22, 24, 27, 0.04), 0 8px 24px -12px rgba(22, 24, 27, 0.18);
+}

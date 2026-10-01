@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Network Flow Lab — NLB &amp; Auto Scaling</title>
+  <meta name="description" content="AWS Project 05: a scalable web application using an internet-facing Network Load Balancer, a TCP:80 target group, and an EC2 Auto Scaling Group across two Availability Zones." />
+  <meta name="theme-color" content="#F3F1EC" />
+  <link rel="icon" type="image/svg+xml" href="public/assets/favicon.svg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+
+  <link rel="stylesheet" href="src/styles/tokens.css" />
+  <link rel="stylesheet" href="src/styles/base.css" />
+  <link rel="stylesheet" href="src/styles/layout.css" />
+  <link rel="stylesheet" href="src/styles/components.css" />
+  <link rel="stylesheet" href="src/styles/sections.css" />
+
+  <script>document.documentElement.classList.replace('no-js', 'js');</script>
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ============ NAVIGATION ============ -->
+  <header class="nav" data-nav>
+    <div class="nav__inner">
+      <a class="nav__brand" href="#overview" aria-label="Network Flow Lab — back to top">
+        <svg class="nav__mark" viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="1" y="1" width="30" height="30" rx="7" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="9" cy="16" r="3" fill="currentColor"/>
+          <path d="M12 16h5m0 0 5-6m-5 6 5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="24" cy="9" r="2.2" fill="var(--signal)"/>
+          <circle cx="24" cy="23" r="2.2" fill="var(--signal)"/>
+        </svg>
+        <span class="nav__brand-text">Flow Lab <span class="nav__brand-no">/ P05</span></span>
+      </a>
+
+      <nav class="nav__menu" id="nav-menu" aria-label="Primary">
+        <ul class="nav__links">
+          <li><a href="#overview" data-nav-link>Overview</a></li>
+          <li><a href="#architecture" data-nav-link>Architecture</a></li>
+          <li><a href="#traffic-flow" data-nav-link>Traffic Flow</a></li>
+          <li><a href="#instances" data-nav-link>Instances</a></li>
+          <li><a href="#autoscaling" data-nav-link>Auto Scaling</a></li>
+          <li><a href="#security" data-nav-link>Security</a></li>
+          <li><a href="#deployment" data-nav-link>Deployment</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav__actions">
+        <button class="motion-toggle" type="button" data-motion-toggle aria-pressed="true">
+          <span class="motion-toggle__dot" aria-hidden="true"></span>
+          <span class="motion-toggle__label">Motion</span>
+        </button>
+        <a class="btn btn--ink btn--sm" href="https://github.com/arnav365/Scalable-Web-Application-with-Network-Load-Balancer-Auto-Scaling" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 16 16" aria-hidden="true" class="btn__icon"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span>GitHub</span>
+          <span class="visually-hidden">(opens in a new tab)</span>
+        </a>
+        <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="nav-menu" data-nav-toggle>
+          <span class="nav__toggle-bars" aria-hidden="true"><span></span><span></span></span>
+          <span class="visually-hidden">Open menu</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ STORY RAIL (wide screens) ============ -->
+  <nav class="rail" aria-label="Story progress">
+    <ol class="rail__list">
+      <li><a href="#overview" data-rail-link><span class="rail__no">01</span><span class="rail__label">Introduction</span></a></li>
+      <li><a href="#architecture" data-rail-link><span class="rail__no">02</span><span class="rail__label">Traffic enters</span></a></li>
+      <li><a href="#traffic-flow" data-rail-link><span class="rail__no">03</span><span class="rail__label">NLB distributes</span></a></li>
+      <li><a href="#instances" data-rail-link><span class="rail__no">04</span><span class="rail__label">Healthy targets</span></a></li>
+      <li><a href="#autoscaling" data-rail-link><span class="rail__no">05</span><span class="rail__label">Capacity scales</span></a></li>
+      <li><a href="#blueprint" data-rail-link><span class="rail__no">06</span><span class="rail__label">Multi-AZ</span></a></li>
+      <li><a href="#security" data-rail-link><span class="rail__no">07</span><span class="rail__label">Security</span></a></li>
+      <li><a href="#deployment" data-rail-link><span class="rail__no">08</span><span class="rail__label">Deployment</span></a></li>
+      <li><a href="#summary" data-rail-link><span class="rail__no">09</span><span class="rail__label">Summary</span></a></li>
+    </ol>
+  </nav>
+
+  <main id="main">
+
+    <!-- ============ 01 · HERO ============ -->
+    <section class="hero" id="overview" aria-labelledby="hero-title" data-chapter>
+      <div class="container hero__grid">
+        <div class="hero__copy">
+          <p class="eyebrow reveal">
+            <span class="eyebrow__no">P05</span>
+            <span>AWS · Network Flow Lab</span>
+          </p>
+          <h1 class="hero__title reveal" id="hero-title">
+            <span class="hero__line">Traffic In.</span>
+            <span class="hero__line hero__line--serif">Infrastructure Ready.</span>
+          </h1>
+          <p class="hero__lede reveal">
+            A production-inspired AWS architecture using Network Load Balancing and EC2 Auto Scaling to distribute traffic and maintain application availability.
+          </p>
+          <div class="hero__cta reveal">
+            <a class="btn btn--ink" href="#architecture">
+              Explore the topology
+              <svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10m0 0-4-4m4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a class="btn btn--ghost" href="#deployment">Deployment guide</a>
+          </div>
+
+          <dl class="spec-strip reveal" aria-label="Key specifications">
+            <div class="spec-strip__cell"><dt>Load balancer</dt><dd>NLB · TCP:80</dd></div>
+            <div class="spec-strip__cell"><dt>Capacity</dt><dd>2 → 4 EC2</dd></div>
+            <div class="spec-strip__cell"><dt>Zones</dt><dd>2 AZs</dd></div>
+            <div class="spec-strip__cell"><dt>Compute</dt><dd>t3.micro</dd></div>
+          </dl>
+
+          <div class="status-panel reveal" aria-labelledby="status-title">
+            <div class="status-panel__head">
+              <h2 class="status-panel__title" id="status-title">Project status</h2>
+              <span class="status-panel__note">Updated manually · no live AWS link</span>
+            </div>
+            <ul class="status-panel__list" data-project-status>
+              <!-- rendered from src/data/project-status.js; static fallback below -->
+              <li class="status-row" data-state="ready"><span class="status-row__key">Architecture</span><span class="status-row__val">Ready</span></li>
+              <li class="status-row" data-state="progress"><span class="status-row__key">Implementation</span><span class="status-row__val">In progress</span></li>
+              <li class="status-row" data-state="pending"><span class="status-row__key">AWS deployment</span><span class="status-row__val">Pending</span></li>
+              <li class="status-row" data-state="pending"><span class="status-row__key">Testing</span><span class="status-row__val">Pending</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <figure class="hero__figure sheet reveal" aria-labelledby="hero-fig-cap">
+          <div class="sheet__bar">
+            <span class="sheet__fig">FIG. 01 — Request path</span>
+            <span class="tag tag--sim">Schematic · Simulated packets</span>
+          </div>
+          <div class="hero__canvas" data-hero-topology>
+            <!-- SVG injected by src/sections/hero.js -->
+          </div>
+          <figcaption class="sheet__caption" id="hero-fig-cap">
+            User traffic travels through the internet to the Network Load Balancer, which forwards each TCP flow through the target group to a healthy EC2 instance. EC2-03 is shown dashed: it only exists when Auto Scaling adds capacity.
+          </figcaption>
+          <div class="title-block" aria-hidden="true">
+            <span>DWG P05-NLB-001</span><span>REV A</span><span>SCALE NTS</span>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ 02 · INTERACTIVE TOPOLOGY ============ -->
+    <section class="section" id="architecture" aria-labelledby="topo-title" data-chapter>
+      <div class="container">
+        <header class="sec-head reveal">
+          <div class="sec-head__meta">
+            <span class="sec-no">02</span>
+            <span class="sec-kicker">Traffic enters the system</span>
+          </div>
+          <div class="sec-head__main">
+            <h2 class="sec-title" id="topo-title">Interactive network topology</h2>
+            <p class="sec-lede">
+              Every component in the request path, drawn as a live map. Hover, tap, or tab through a node to highlight its connections and read what it does.
+            </p>
+          </div>
+        </header>
+
+        <div class="topo reveal">
+          <figure class="sheet topo__figure" aria-labelledby="topo-cap">
+            <div class="sheet__bar">
+              <span class="sheet__fig">FIG. 02 — Topology</span>
+              <span class="tag tag--sim">Interactive · Simulated packets</span>
+            </div>
+            <div class="topo__canvas" data-topology></div>
+            <figcaption class="visually-hidden" id="topo-cap">
+              Interactive topology: Internet to Network Load Balancer to Target Group, which fans out to four EC2 instance slots inside an Auto Scaling Group. Instances 01 and 02 are baseline capacity; 03 and 04 are scale-out capacity.
+            </figcaption>
+          </figure>
+
+          <aside class="topo__panel" aria-live="polite" data-topo-panel>
+            <p class="topo__hint">
+              <span class="topo__hint-key" aria-hidden="true">↖</span>
+              Select a node to inspect it.
+            </p>
+          </aside>
+        </div>
+
+        <ul class="legend reveal" aria-label="Legend">
+          <li><span class="legend__swatch legend__swatch--traffic" aria-hidden="true"></span>Traffic path</li>
+          <li><span class="legend__swatch legend__swatch--healthy" aria-hidden="true"></span>Healthy · baseline capacity</li>
+          <li><span class="legend__swatch legend__swatch--scale" aria-hidden="true"></span>Scale-out capacity (not running at desired = 2)</li>
+          <li><span class="legend__swatch legend__swatch--packet" aria-hidden="true"></span>Simulated packet</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ 03 · INSIDE THE TRAFFIC PATH ============ -->
+    <section class="section section--band" id="traffic-flow" aria-labelledby="flow-title" data-chapter>
+      <div class="container">
+        <header class="sec-head reveal">
+          <div class="sec-head__meta">
+            <span class="sec-no">03</span>
+            <span class="sec-kicker">NLB distributes traffic</span>
+          </div>
+          <div class="sec-head__main">
+            <h2 class="sec-title" id="flow-title">Inside the traffic path</h2>
+            <p class="sec-lede">
+              A Network Load Balancer works at Layer 4. It does not read HTTP — it accepts a TCP connection on the listener and hands the whole flow to one healthy target.
+            </p>
+          </div>
+        </header>
+
+        <ol class="pipeline reveal" aria-label="Request pipeline">
+          <li class="stage">
+            <div class="stage__icon" data-icon="user" aria-hidden="true"></div>
+            <p class="stage__step">Stage 1</p>
+            <h3 class="stage__name">Client</h3>
+            <p class="stage__text">A browser or <code>curl</code> resolves the NLB DNS name and opens a TCP connection.</p>
+            <p class="stage__proto"><span>TCP</span><span>:80</span></p>
+          </li>
+          <li class="pipe" aria-hidden="true"><span class="pipe__track"><span class="pipe__runner"></span></span></li>
+          <li class="stage stage--key">
+            <div class="stage__icon" data-icon="nlb" aria-hidden="true"></div>
+            <p class="stage__step">Stage 2</p>
+            <h3 class="stage__name">NLB listener</h3>
+            <p class="stage__text">The listener accepts the connection and selects a target with a flow hash.</p>
+            <p class="stage__proto"><span>TCP</span><span>:80</span></p>
+          </li>
+          <li class="pipe" aria-hidden="true"><span class="pipe__track"><span class="pipe__runner" style="--delay:.45s"></span></span></li>
+          <li class="stage">
+            <div class="stage__icon" data-icon="tg" aria-hidden="true"></div>
+            <p class="stage__step">Stage 3</p>
+            <h3 class="stage__name">Target group</h3>
+            <p class="stage__text">Holds the registered instances. Only targets passing the health check are eligible.</p>
+            <p class="stage__proto"><span>Health</span><span>TCP:80</span></p>
+          </li>
+          <li class="pipe" aria-hidden="true"><span class="pipe__track"><span class="pipe__runner" style="--delay:.9s"></span></span></li>
+          <li class="stage">
+            <div class="stage__icon" data-icon="ec2" aria-hidden="true"></div>
+            <p class="stage__step">Stage 4</p>
+            <h3 class="stage__name">Healthy EC2</h3>
+            <p class="stage__text">Apache2 on Ubuntu 24.04 answers the request and the response returns over the same flow.</p>
+            <p class="stage__proto"><span>Apache2</span><span>:80</span></p>
+          </li>
+        </ol>
+
+        <div class="facts reveal">
+          <article class="fact">
+            <p class="fact__k">Layer</p>
+            <p class="fact__v">L4 · TCP</p>
+            <p class="fact__d">Routing decisions use connection data, not URL paths or headers.</p>
+          </article>
+          <article class="fact">
+            <p class="fact__k">Target selection</p>
+            <p class="fact__v">Flow hash</p>
+            <p class="fact__d">Protocol, source/destination IP and port, and TCP sequence number pick the target for each new flow.</p>
+          </article>
+          <article class="fact">
+            <p class="fact__k">Client IP</p>
+            <p class="fact__v">Preserved</p>
+            <p class="fact__d">With instance targets, EC2 sees the real client address — which is why its security group must allow port 80.</p>
+          </article>
+          <article class="fact">
+            <p class="fact__k">Cross-zone</p>
+            <p class="fact__v">Off by default</p>
+            <p class="fact__d">Each NLB node routes to targets in its own AZ unless cross-zone load balancing is turned on.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 04 · LOAD DISTRIBUTION + INSTANCES ============ -->
+    <section class="section" id="instances" aria-labelledby="dist-title" data-chapter>
+      <div class="container">
+        <header class="sec-head reveal">
+          <div class="sec-head__meta">
+            <span class="sec-no">04</span>
+            <span class="sec-kicker">Target group selects healthy instances</span>
+          </div>
+          <div class="sec-head__main">
+            <h2 class="sec-title" id="dist-title">Load distribution</h2>
+            <p class="sec-lede">
+              A stream of requests hits the NLB and lands on the two baseline instances. Each request is a new TCP flow with its own source port, so the flow hash spreads them across both targets.
+            </p>
+          </div>
+        </header>
+
+        <div class="dist reveal" data-distribution>
+          <div class="dist__stage sheet">
+            <div class="sheet__bar">
+              <span class="sheet__fig">FIG. 03 — Request stream</span>
+              <span class="tag tag--sim" data-dist-mode>Simulation</span>
+            </div>
+            <div class="dist__canvas" data-dist-canvas></div>
+            <div class="dist__controls" role="group" aria-label="Simulation controls">
+              <button class="btn btn--ink btn--sm" type="button" data-dist-toggle aria-pressed="false">Start stream</button>
+              <button class="btn btn--ghost btn--sm" type="button" data-dist-burst>Send 10 requests</button>
+              <button class="btn btn--ghost btn--sm" type="button" data-dist-reset>Reset</button>
+              <button class="btn btn--line btn--sm" type="button" data-dist-probe>Probe live NLB</button>
+            </div>
+            <p class="dist__note" data-dist-note>
+              Simulated flows. A real NLB hashes each TCP flow, so distribution is even over many connections but is <strong>not</strong> strict round-robin.
+            </p>
+          </div>
+
+          <div class="dist__side">
+            <div class="counters" aria-label="Requests per instance">
+              <div class="counter" data-counter="EC2-01">
+                <div class="counter__head"><span class="counter__name">EC2-01</span><span class="counter__az">AZ-1</span></div>
+                <div class="counter__bar"><span data-counter-bar></span></div>
+                <p class="counter__val"><span data-counter-val>0</span> req · <span data-counter-pct>0%</span></p>
+              </div>
+              <div class="counter" data-counter="EC2-02">
+                <div class="counter__head"><span class="counter__name">EC2-02</span><span class="counter__az">AZ-2</span></div>
+                <div class="counter__bar"><span data-counter-bar></span></div>
+                <p class="counter__val"><span data-counter-val>0</span> req · <span data-counter-pct>0%</span></p>
+              </div>
+            </div>
+
+            <div class="log">
+              <div class="log__head">
+                <span>Request log</span>
+                <span class="log__total"><span data-dist-total>0</span> total</span>
+              </div>
+              <ol class="log__list" data-dist-log aria-label="Recent requests" aria-live="off"></ol>
+              <p class="visually-hidden" aria-live="polite" data-dist-summary></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="tiles-head reveal">
+          <h3 class="sub-title">EC2 server tiles</h3>
+          <span class="tag tag--demo" data-tiles-source>Demo data · not from AWS</span>
+        </div>
+        <ul class="tiles reveal" data-tiles aria-label="EC2 instances">
+          <!-- rendered by src/sections/instances.js -->
+        </ul>
+        <noscript><p class="note">Enable JavaScript to view the instance tiles.</p></noscript>
+        <p class="note reveal">
+          Instance IDs, IPs and health states are never invented here. Once the stack is deployed with the provided user-data script, each instance publishes <code>/instance.json</code> from its own metadata and <em>Probe live NLB</em> fills these tiles with real values.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ 05 · AUTO SCALING ============ -->
+    <section class="section section--band" id="autoscaling" aria-labelledby="asg-title" data-chapter>
+      <div class="container">
+        <header class="sec-head reveal">
+          <div class="sec-head__meta">
+            <span class="sec-no">05</span>
+            <span class="sec-kicker">Auto Scaling changes capacity</span>
+          </div>
+          <div class="sec-head__main">
+            <h2 class="sec-title" id="asg-title">Capacity follows traffic</h2>
+            <p class="sec-lede">
+              Drag the traffic level and watch the Auto Scaling Group grow from its minimum of two instances to its maximum of four — always balanced across both Availability Zones.
+            </p>
+          </div>
+        </header>
+
+        <div class="asg reveal" data-asg>
+          <div class="asg__control sheet">
+            <div class="sheet__bar">
+              <span class="sheet__fig">FIG. 04 — Capacity model</span>
+              <span class="tag tag--sim">Architecture simulation</span>
+            </div>
+
+            <div class="asg__slider">
+              <label class="asg__label" for="traffic-level">Traffic level</label>
+              <output class="asg__level" for="traffic-level" data-asg-level>Normal</output>
+              <input class="range" id="traffic-level" type="range" min="0" max="3" step="1" value="1" list="traffic-stops" aria-valuetext="Normal traffic, 2 instances" data-asg-range />
+              <datalist id="traffic-stops">
+                <option value="0" label="Low"></option>
+                <option value="1" label="Normal"></option>
+                <option value="2" label="High"></option>
+                <option value="3" label="Peak"></option>
+              </datalist>
+              <div class="range__ticks" aria-hidden="true">
+                <span>Low</span><span>Normal</span><span>High</span><span>Peak</span>
+              </div>
+            </div>
+
+            <dl class="asg__readout">
+              <div><dt>Desired</dt><dd data-asg-desired>2</dd></div>
+              <div><dt>Min</dt><dd>2</dd></div>
+              <div><dt>Max</dt><dd>4</dd></div>
+              <div><dt>Running</dt><dd data-asg-running>2</dd></div>
+            </dl>
+
+            <ol class="asg__chain" aria-label="Scaling steps">
+              <li data-chain="2"><span class="asg__chain-n">2</span><span>instances</span></li>
+              <li class="asg__chain-arrow" aria-hidden="true">traffic ↑</li>
+              <li data-chain="3"><span class="asg__chain-n">3</span><span>instances</span></li>
+              <li class="asg__chain-arrow" aria-hidden="true">traffic ↑</li>
+              <li data-chain="4"><span class="asg__chain-n">4</span><span>instances</span></li>
+            </ol>
+
+            <p class="asg__disclaimer">
+              This slider animates the architecture on this page only. It is not connected to AWS and does not change a real Auto Scaling Group.
+            </p>
+          </div>
+
+          <div class="asg__visual sheet">
+            <div class="asg__lane" data-asg-lane aria-hidden="true"></div>
+            <div class="asg__frame">
+              <p class="asg__frame-label">Auto Scaling Group <span>min 2 · max 4</span></p>
+              <div class="asg__zones">
+                <div class="asg__zone">
+                  <p class="asg__zone-label">AZ-1 <span>10.0.1.0/24</span></p>
+                  <div class="asg__slots" data-asg-zone="1"></div>
+                </div>
+                <div class="asg__zone">
+                  <p class="asg__zone-label">AZ-2 <span>10.0.2.0/24</span></p>
+                  <div class="asg__slots" data-asg-zone="2"></div>
+                </div>
+              </div>
+            </div>
+            <div class="asg__activity">
+              <p class="asg__activity-head">Scaling activity <span>(simulated)</span></p>
+              <ol class="asg__activity-list" data-asg-activity aria-live="polite"></ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 06 · BLUEPRINT + AZs ============ -->
+    <section class="section" id="blueprint" aria-labelledby="bp-title" data-chapter>
+      <div class="container">
+        <header class="sec-head reveal">
+          <div class="sec-head__meta">
+            <span class="sec-no">06</span>
+            <span class="sec-kicker">Multi-AZ architecture</span>
+          </div>
+          <div class="sec-head__main">
+            <h2 class="sec-title" id="bp-title">Architecture blueprint</h2>
+            <p class="sec-lede">
+              The full network drawing: one VPC, two public subnets in two Availability Zones, an NLB with a node in each zone, and an Auto Scaling Group that spans both.
+            </p>
+          </div>
+        </header>
+
+        <figure class="sheet blueprint reveal" aria-labelledby="bp-cap">
+          <div class="sheet__bar">
+            <span class="sheet__fig">FIG. 05 — Blueprint · VPC 10.0.0.0/16</span>
+            <span class="tag tag--sim">Simulated packets</span>
+          </div>
+          <div class="blueprint__canvas" data-blueprint></div>
+          <figcaption class="sheet__caption" id="bp-cap">
+            Internet → Internet Gateway → NLB nodes (one per AZ) → target group → EC2 instances in public subnets 10.0.1.0/24 and 10.0.2.0/24. Cross-zone load balancing is shown in its default (off) state, so each NLB node forwards to targets in its own zone.
+          </figcaption>
+        </figure>
+
+        <div class="zones reveal">
+          <article class="zone-card">
+            <p class="zone-card__k">Availability Zone 1</p>
+            <h3 class="zone-card__cidr">10.0.1.0/24</h3>
+            <p class="zone-card__type">Public subnet · route 0.0.0.0/0 → IGW</p>
+            <ul class="zone-card__list">
+              <li><span class="dot dot--healthy" aria-hidden="true"></span>EC2-01 · baseline</li>
+              <li><span class="dot dot--scale" aria-hidden="true"></span>EC2-03 · scale-out</li>
+              <li><span class="dot dot--traffic" aria-hidden="true"></span>NLB node (AZ-1)</li>
+            </ul>
+          </article>
+          <article class="zone-card">
+            <p class="zone-card__k">Availability Zone 2</p>
+            <h3 class="zone-card__cidr">10.0.2.0/24</h3>
+            <p class="zone-card__type">Public subnet · route 0.0.0.0/0 → IGW</p>
+            <ul class="zone-card__list">
+              <li><span class="dot dot--healthy" aria-hidden="true"></span>EC2-02 · baseline</li>
+              <li><span class="dot dot--scale" aria-hidden="true"></span>EC2-04 · scale-out</li>
+              <li><span class="dot dot--traffic" aria-hidden="true"></span>NLB node (AZ-2)</li>
+            </ul>
+          </article>
+          <article class="zone-card zone-card--note">
+            <p class="zone-card__k">Why two zones</p>
+            <p class="zone-card__lead">Instances are distributed across multiple Availability Zones to improve availability.</p>
+            <p class="zone-card__body">If one zone has a problem, the NLB stops sending traffic to its unhealthy targets and the Auto Scaling Group launches replacements to restore the minimum of two.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 07 · SECURITY ============ -->
+    <section class="section section--band" id="security" aria-labelledby="sec-title" data-chapter>
+      <div class="container">
+        <header class="sec-head reveal">
+          <div class="sec-head__meta">
+            <span class="sec-no">07</span>
+            <span class="sec-kicker">Security</span>
+          </div>
+          <div class="sec-head__main">
+            <h2 class="sec-title" id="sec-title">Traffic guardrails</h2>
+            <p class="sec-lede">
+              One security group on the web instances. Web traffic is open on port 80; administrative SSH is restricted to a single address.
+            </p>
+          </div>
+        </header>
+
+        <div class="guard reveal">
+          <div class="guard__rules">
+            <div class="rules">
+              <div class="rules__head">
+                <h3>p5-web-sg · Inbound</h3>
+                <span class="tag">Security group</span>
+              </div>
+              <div class="table-wrap" tabindex="0" role="region" aria-label="Inbound rules">
+                <table class="rules__table">
+                  <thead><tr><th scope="col">Type</th><th scope="col">Protocol</th><th scope="col">Port</th><th scope="col">Source</th><th scope="col">Purpose</th></tr></thead>
+                  <tbody>
+                    <tr><td data-label="Type"><strong>HTTP</strong></td><td data-label="Protocol">TCP</td><td data-label="Port">80</td><td data-label="Source"><code>0.0.0.0/0</code></td><td data-label="Purpose">Client traffic forwarded by the NLB (client IP is preserved) and NLB health checks</td></tr>
+                    <tr><td data-label="Type"><strong>SSH</strong></td><td data-label="Protocol">TCP</td><td data-label="Port">22</td><td data-label="Source"><code>&lt;MY-IP&gt;/32</code></td><td data-label="Purpose">Administration from your own IP only</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="rules">
+              <div class="rules__head">
+                <h3>p5-web-sg · Outbound</h3>
+                <span class="tag">Default</span>
+              </div>
+              <div class="table-wrap" tabindex="0" role="region" aria-label="Outbound rules">
+                <table class="rules__table">
+                  <thead><tr><th scope="col">Type</th><th scope="col">Protocol</th><th scope="col">Port</th><th scope="col">Destination</th><th scope="col">Purpose</th></tr></thead>
+                  <tbody>
+                    <tr><td data-label="Type"><strong>All traffic</strong></td><td data-label="Protocol">All</td><td data-label="Port">All</td><td data-label="Destination"><code>0.0.0.0/0</code></td><td data-label="Purpose">Package installs (<code>apt</code>) and responses</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <ul class="guard__notes">
+              <li><strong>Never</strong> open SSH to <code>0.0.0.0/0</code> in the recommended setup.</li>
+              <li>An NLB with instance targets preserves the client IP, so the instance security group sees the client's address — not the load balancer's.</li>
+              <li>NLBs can also have their own security group; it is optional for this project.</li>
+            </ul>
+          </div>
+
+          <div class="gate" aria-label="Traffic gate diagram">
+            <div class="gate__node">Internet</div>
+            <div class="gate__wire" aria-hidden="true"><span class="gate__pulse"></span></div>
+            <div class="gate__check gate__check--allow">
+              <span class="gate__port">TCP 80</span>
+              <span class="gate__verdict">Allowed · 0.0.0.0/0</span>
+            </div>
+            <div class="gate__wire" aria-hidden="true"><span class="gate__pulse" style="--delay:.5s"></span></div>
+            <div class="gate__node gate__node--nlb">NLB <span>TCP:80 listener</span></div>
+            <div class="gate__wire" aria-hidden="true"><span class="gate__pulse" style="--delay:1s"></span></div>
+            <div class="gate__node gate__node--ec2">EC2 <span>p5-web-sg</span></div>
+
+            <div class="gate__side">
+              <div class="gate__check gate__check--deny">
+                <span class="gate__port">TCP 22</span>
+                <span class="gate__verdict">Denied · from internet</span>
+              </div>
+              <div class="gate__check gate__check--admin">
+                <span class="gate__port">TCP 22</span>
+                <span class="gate__verdict">Allowed · My IP /32</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 08 · DEPLOYMENT ============ -->
+    <section class="section" id="deployment" aria-labelledby="deploy-title" data-chapter>
+      <div class="container">
+        <header class="sec-head reveal">
+          <div class="sec-head__meta">
+            <span class="sec-no">08</span>
+            <span class="sec-kicker">Deployment</span>
+          </div>
+          <div class="sec-head__main">
+            <h2 class="sec-title" id="deploy-title">Build <span class="arrow" aria-hidden="true">→</span> Deploy <span class="arrow" aria-hidden="true">→</span> Scale</h2>
+            <p class="sec-lede">
+              Ten steps in the AWS console, in the order they depend on each other. Every resource ID is a placeholder until you create it.
+            </p>
+          </div>
+        </header>
+
+        <ol class="timeline reveal">
+          <li class="timeline__step">
+            <span class="timeline__no">01</span>
+            <div class="timeline__body">
+              <h3>Create VPC</h3>
+              <p>VPC <code>10.0.0.0/16</code> named <code>p5-vpc</code>. Attach an Internet Gateway and add a route table with <code>0.0.0.0/0 → IGW</code>.</p>
+              <p class="timeline__meta">VPC · Internet Gateway · Route table</p>
+            </div>
+          </li>
+          <li class="timeline__step">
+            <span class="timeline__no">02</span>
+            <div class="timeline__body">
+              <h3>Create subnets</h3>
+              <p>Public subnet 1 <code>10.0.1.0/24</code> in AZ-1, public subnet 2 <code>10.0.2.0/24</code> in AZ-2. Associate both with the public route table and enable auto-assign public IPv4.</p>
+              <p class="timeline__meta">2 subnets · 2 AZs · no NAT Gateway</p>
+            </div>
+          </li>
+          <li class="timeline__step">
+            <span class="timeline__no">03</span>
+            <div class="timeline__body">
+              <h3>Create security group</h3>
+              <p><code>p5-web-sg</code>: inbound HTTP TCP 80 from <code>0.0.0.0/0</code>, SSH TCP 22 from <code>&lt;MY-IP&gt;/32</code>.</p>
+              <p class="timeline__meta">Security group</p>
+            </div>
+          </li>
+          <li class="timeline__step">
+            <span class="timeline__no">04</span>
+            <div class="timeline__body">
+              <h3>Create target group</h3>
+              <p><code>p5-tg</code>: target type <em>Instances</em>, protocol TCP, port 80, VPC <code>p5-vpc</code>, health check TCP. Register no targets yet — the ASG does that.</p>
+              <p class="timeline__meta">Target group · TCP:80</p>
+            </div>
+          </li>
+          <li class="timeline__step">
+            <span class="timeline__no">05</span>
+            <div class="timeline__body">
+              <h3>Create NLB</h3>
+              <p><code>p5-nlb</code>: Network Load Balancer, internet-facing, IPv4, both public subnets. Listener TCP:80 forwarding to <code>p5-tg</code>.</p>
+              <p class="timeline__meta">Network Load Balancer</p>
+            </div>
+          </li>
+          <li class="timeline__step">
+            <span class="timeline__no">06</span>
+            <div class="timeline__body">
+              <h3>Create launch template</h3>
+              <p><code>p5-lt</code>: Ubuntu 24.04 LTS AMI <code>&lt;YOUR-AMI-ID&gt;</code>, <code>t3.micro</code>, your key pair, <code>p5-web-sg</code>, public IP enabled, and the user-data script from <code>scripts/deployment/user-data.sh</code>.</p>
+              <p class="timeline__meta">Launch template · User data</p>
+            </div>
+          </li>
+          <li class="timeline__step">
+            <span class="timeline__no">07</span>
+            <div class="timeline__body">
+              <h3>Create Auto Scaling Group</h3>
+              <p><code>p5-asg</code> from <code>p5-lt</code>, both public subnets. Capacity: min 2, desired 2, max 4.</p>
+              <p class="timeline__meta">Auto Scaling Group</p>
+            </div>
+          </li>
+          <li class="timeline__step">
+            <span class="timeline__no">08</span>
+            <div class="timeline__body">
+              <h3>Attach target group</h3>
+              <p>In the ASG's load balancing settings, attach <code>p5-tg</code> and turn on ELB health checks with a 120-second grace period.</p>
+              <p class="timeline__meta">ASG ↔ Target group</p>
+            </div>
+          </li>
+          <li class="timeline__step">
+            <span class="timeline__no">09</span>
+            <div class="timeline__body">
+              <h3>Launch EC2 instances</h3>
+              <p>The ASG launches two instances, one per AZ. User data installs Apache2, deploys the site and writes <code>/instance.json</code>. Wait for targets to become <em>healthy</em>.</p>
+              <p class="timeline__meta">EC2 · Apache2</p>
+            </div>
+          </li>
+          <li class="timeline__step">
+            <span class="timeline__no">10</span>
+            <div class="timeline__body">
+              <h3>Test NLB DNS</h3>
+              <p>Open <code>http://&lt;YOUR-NLB-DNS&gt;</code>, run the distribution test from the command line, then raise desired capacity to 3 and 4 to watch the ASG scale.</p>
+              <p class="timeline__meta">Validation</p>
+            </div>
+          </li>
+        </ol>
+
+        <!-- Commands -->
+        <div class="cmd reveal" data-tabs>
+          <div class="cmd__head">
+            <h3 class="sub-title">Deployment commands</h3>
+            <p class="cmd__hint">Placeholders in <code>&lt;ANGLE-BRACKETS&gt;</code> must be replaced with your own values.</p>
+          </div>
+          <div class="cmd__tabs" role="tablist" aria-label="Command groups">
+            <button role="tab" type="button" id="tab-apache" aria-controls="panel-apache" aria-selected="true">Apache setup</button>
+            <button role="tab" type="button" id="tab-verify" aria-controls="panel-verify" aria-selected="false" tabindex="-1">Verify</button>
+            <button role="tab" type="button" id="tab-cli" aria-controls="panel-cli" aria-selected="false" tabindex="-1">AWS CLI</button>
+            <button role="tab" type="button" id="tab-test" aria-controls="panel-test" aria-selected="false" tabindex="-1">Traffic test</button>
+          </div>
+
+          <div class="cmd__panel" role="tabpanel" id="panel-apache" aria-labelledby="tab-apache" tabindex="0">
+            <div class="code">
+              <div class="code__bar"><span>ubuntu@ec2 — bash</span><button class="code__copy" type="button" data-copy>Copy</button></div>
+<pre><code><span class="c"># Install and start Apache2 on Ubuntu 24.04 LTS</span>
+sudo apt update
+sudo apt install apache2 -y
+sudo systemctl enable apache2
+sudo systemctl start apache2</code></pre>
+            </div>
+          </div>
+
+          <div class="cmd__panel" role="tabpanel" id="panel-verify" aria-labelledby="tab-verify" tabindex="0" hidden>
+            <div class="code">
+              <div class="code__bar"><span>ubuntu@ec2 — bash</span><button class="code__copy" type="button" data-copy>Copy</button></div>
+<pre><code><span class="c"># Service health on the instance</span>
+systemctl status apache2
+curl -I http://localhost
+
+<span class="c"># Instance identity written by user data</span>
+curl http://localhost/instance.json</code></pre>
+            </div>
+          </div>
+
+          <div class="cmd__panel" role="tabpanel" id="panel-cli" aria-labelledby="tab-cli" tabindex="0" hidden>
+            <div class="code">
+              <div class="code__bar"><span>local — aws cli v2</span><button class="code__copy" type="button" data-copy>Copy</button></div>
+<pre><code><span class="c"># Target group (TCP:80, instance targets)</span>
+aws elbv2 create-target-group --name p5-tg \
+  --protocol TCP --port 80 --target-type instance \
+  --vpc-id &lt;YOUR-VPC-ID&gt; --health-check-protocol TCP
+
+<span class="c"># Internet-facing Network Load Balancer in both public subnets</span>
+aws elbv2 create-load-balancer --name p5-nlb --type network \
+  --scheme internet-facing --subnets &lt;YOUR-SUBNET-1-ID&gt; &lt;YOUR-SUBNET-2-ID&gt;
+
+<span class="c"># Listener TCP:80 → target group</span>
+aws elbv2 create-listener --load-balancer-arn &lt;YOUR-NLB-ARN&gt; \
+  --protocol TCP --port 80 \
+  --default-actions Type=forward,TargetGroupArn=&lt;YOUR-TARGET-GROUP-ARN&gt;
+
+<span class="c"># Auto Scaling Group (min 2 / desired 2 / max 4)</span>
+aws autoscaling create-auto-scaling-group --auto-scaling-group-name p5-asg \
+  --launch-template LaunchTemplateName=p5-lt,Version='$Latest' \
+  --min-size 2 --desired-capacity 2 --max-size 4 \
+  --vpc-zone-identifier "&lt;YOUR-SUBNET-1-ID&gt;,&lt;YOUR-SUBNET-2-ID&gt;" \
+  --target-group-arns &lt;YOUR-TARGET-GROUP-ARN&gt; \
+  --health-check-type ELB --health-check-grace-period 120</code></pre>
+            </div>
+            <p class="cmd__more">Full VPC, subnet, security group and launch template commands: <code>scripts/deployment/aws-cli-reference.sh</code></p>
+          </div>
+
+          <div class="cmd__panel" role="tabpanel" id="panel-test" aria-labelledby="tab-test" tabindex="0" hidden>
+            <div class="code">
+              <div class="code__bar"><span>local — bash</span><button class="code__copy" type="button" data-copy>Copy</button></div>
+<pre><code><span class="c"># Target health as the NLB sees it</span>
+aws elbv2 describe-target-health --target-group-arn &lt;YOUR-TARGET-GROUP-ARN&gt;
+
+<span class="c"># 20 separate TCP connections → watch instance IDs alternate</span>
+for i in $(seq 1 20); do
+  curl -s http://&lt;YOUR-NLB-DNS&gt;/instance.json; echo
+done
+
+<span class="c"># Demonstrate scaling by raising desired capacity</span>
+aws autoscaling set-desired-capacity \
+  --auto-scaling-group-name p5-asg --desired-capacity 3</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validation -->
+        <div class="validate reveal" data-validation>
+          <div class="validate__head">
+            <div>
+              <h3 class="sub-title">Validation checklist</h3>
+              <p class="validate__sub">Nothing is marked complete until it has been tested against a real deployment. Click an item after you have verified it yourself; your marks are stored only in this browser.</p>
+            </div>
+            <div class="validate__meter">
+              <span class="validate__count"><span data-validate-count>0</span>/8 verified</span>
+              <span class="validate__bar"><span data-validate-bar></span></span>
+              <button class="btn btn--ghost btn--sm" type="button" data-validate-reset>Reset</button>
+            </div>
+          </div>
+          <ul class="checks" data-validate-list>
+            <!-- rendered by src/sections/validation.js -->
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 09 · SUMMARY ============ -->
+    <section class="section section--band" id="summary" aria-labelledby="sum-title" data-chapter>
+      <div class="container">
+        <header class="sec-head reveal">
+          <div class="sec-head__meta">
+            <span class="sec-no">09</span>
+            <span class="sec-kicker">Project summary</span>
+          </div>
+          <div class="sec-head__main">
+            <h2 class="sec-title" id="sum-title">Six services. One request path.</h2>
+            <p class="sec-lede">
+              Everything this project uses, what each part is responsible for, and what comes next.
+            </p>
+          </div>
+        </header>
+
+        <ol class="service-map reveal" aria-label="AWS services">
+          <li class="svc">
+            <div class="svc__icon" data-icon="vpc" aria-hidden="true"></div>
+            <h3 class="svc__name">VPC</h3>
+            <p class="svc__purpose">Isolated network for the whole stack.</p>
+            <p class="svc__role">10.0.0.0/16 with two public subnets across two AZs and an Internet Gateway.</p>
+          </li>
+          <li class="svc">
+            <div class="svc__icon" data-icon="sg" aria-hidden="true"></div>
+            <h3 class="svc__name">Security Groups</h3>
+            <p class="svc__purpose">Stateful firewall for the instances.</p>
+            <p class="svc__role">Allows HTTP 80 from anywhere and SSH 22 from My IP only.</p>
+          </li>
+          <li class="svc svc--key">
+            <div class="svc__icon" data-icon="nlb" aria-hidden="true"></div>
+            <h3 class="svc__name">NLB</h3>
+            <p class="svc__purpose">Distributes TCP traffic across healthy EC2 instances.</p>
+            <p class="svc__role">Internet-facing entry point with a TCP:80 listener in both AZs.</p>
+          </li>
+          <li class="svc">
+            <div class="svc__icon" data-icon="tg" aria-hidden="true"></div>
+            <h3 class="svc__name">Target Group</h3>
+            <p class="svc__purpose">Tracks registered targets and their health.</p>
+            <p class="svc__role">TCP:80 instance targets, health checked over TCP.</p>
+          </li>
+          <li class="svc">
+            <div class="svc__icon" data-icon="ec2" aria-hidden="true"></div>
+            <h3 class="svc__name">EC2</h3>
+            <p class="svc__purpose">Runs the Apache web application.</p>
+            <p class="svc__role">t3.micro · Ubuntu 24.04 LTS · Apache2 on port 80.</p>
+          </li>
+          <li class="svc">
+            <div class="svc__icon" data-icon="asg" aria-hidden="true"></div>
+            <h3 class="svc__name">Auto Scaling</h3>
+            <p class="svc__purpose">Maintains the required number of instances.</p>
+            <p class="svc__role">Min 2 · desired 2 · max 4, replaces unhealthy instances.</p>
+          </li>
+        </ol>
+
+        <div class="summary-grid reveal">
+          <div class="stack">
+            <h3 class="sub-title">Technology stack</h3>
+            <dl class="stack__list">
+              <div><dt>AWS</dt><dd><span class="chip">VPC</span><span class="chip">EC2</span><span class="chip">NLB</span><span class="chip">Target Group</span><span class="chip">Auto Scaling</span><span class="chip">Security Groups</span></dd></div>
+              <div><dt>OS</dt><dd><span class="chip">Ubuntu 24.04 LTS</span></dd></div>
+              <div><dt>Web server</dt><dd><span class="chip">Apache2</span></dd></div>
+              <div><dt>Frontend</dt><dd><span class="chip">HTML</span><span class="chip">CSS</span><span class="chip">JavaScript</span></dd></div>
+              <div><dt>Visualization</dt><dd><span class="chip">SVG</span><span class="chip">CSS animations</span><span class="chip">JavaScript</span></dd></div>
+            </dl>
+          </div>
+
+          <div class="roadmap">
+            <h3 class="sub-title">Roadmap</h3>
+            <ol class="roadmap__track">
+              <li class="phase phase--done"><span class="phase__no">Phase 1</span><span class="phase__name">NLB + EC2</span><span class="phase__state">✓ Designed</span></li>
+              <li class="phase phase--done"><span class="phase__no">Phase 2</span><span class="phase__name">Auto Scaling</span><span class="phase__state">✓ Designed</span></li>
+              <li class="phase phase--done"><span class="phase__no">Phase 3</span><span class="phase__name">Multi-AZ</span><span class="phase__state">✓ Designed</span></li>
+              <li class="phase phase--next"><span class="phase__no">Phase 4</span><span class="phase__name">Advanced monitoring</span><span class="phase__state">Next</span></li>
+            </ol>
+            <p class="note">“Designed” means the architecture, site and deployment scripts are complete. Live AWS deployment and testing are still pending — see the validation checklist.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div>
+        <p class="footer__title">Network Flow Lab <span>/ Project 05</span></p>
+        <p class="footer__text">Scalable Web Application with Network Load Balancer &amp; Auto Scaling. Any value labeled <em>Demo data</em> or <em>Simulation</em> is illustrative; real values come only from a deployed environment.</p>
+      </div>
+      <div class="footer__links">
+        <a href="#overview">Back to top ↑</a>
+        <a href="https://github.com/arnav365/Scalable-Web-Application-with-Network-Load-Balancer-Auto-Scaling" target="_blank" rel="noopener noreferrer">GitHub repository<span class="visually-hidden"> (opens in a new tab)</span></a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
